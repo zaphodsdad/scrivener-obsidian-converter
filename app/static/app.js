@@ -23,41 +23,59 @@ function hideStatus() {
     statusDiv.className = 'status hidden';
 }
 
-// Unfortunately, browsers can't give us folder paths directly.
-// We need to prompt the user to enter the path manually.
-// In a real desktop app (Electron/Tauri), we'd use native dialogs.
+// Select Scrivener project
+selectScrivBtn.addEventListener('click', async () => {
+    selectScrivBtn.disabled = true;
+    selectScrivBtn.textContent = 'Opening...';
 
-selectScrivBtn.addEventListener('click', () => {
-    const path = prompt(
-        'Enter the full path to your Scrivener project:\n\n' +
-        'Example: /Users/yourname/Documents/My Novel.scriv\n\n' +
-        'Tip: In Finder, right-click the .scriv file, hold Option, and click "Copy as Pathname"'
-    );
-    if (path) {
-        scrivPathInput.value = path.trim();
-        updateConvertButton();
+    try {
+        const response = await fetch('/select-scriv', { method: 'POST' });
+        const data = await response.json();
 
-        // Auto-suggest output path
-        if (!outputPathInput.value) {
-            const suggested = path.replace(/\.scriv\/?$/, ' Vault');
-            outputPathInput.value = suggested;
+        if (data.success && data.path) {
+            scrivPathInput.value = data.path;
             updateConvertButton();
+
+            // Auto-suggest output path if empty
+            if (!outputPathInput.value) {
+                const suggested = data.path.replace(/\.scriv$/, ' Vault');
+                outputPathInput.value = suggested;
+                updateConvertButton();
+            }
+
+            hideStatus();
+        } else if (data.error) {
+            showStatus(data.error, 'error');
         }
+    } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+    } finally {
+        selectScrivBtn.disabled = false;
+        selectScrivBtn.textContent = 'Select .scriv';
     }
 });
 
-selectOutputBtn.addEventListener('click', () => {
-    const suggested = scrivPathInput.value
-        ? scrivPathInput.value.replace(/\.scriv\/?$/, ' Vault')
-        : '';
+// Select output folder
+selectOutputBtn.addEventListener('click', async () => {
+    selectOutputBtn.disabled = true;
+    selectOutputBtn.textContent = 'Opening...';
 
-    const path = prompt(
-        'Enter the path where you want to create the Obsidian vault:\n\n' +
-        (suggested ? `Suggested: ${suggested}` : 'Example: /Users/yourname/Documents/My Novel Vault')
-    );
-    if (path) {
-        outputPathInput.value = path.trim();
-        updateConvertButton();
+    try {
+        const response = await fetch('/select-output', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success && data.path) {
+            outputPathInput.value = data.path;
+            updateConvertButton();
+            hideStatus();
+        } else if (data.error) {
+            showStatus(data.error, 'error');
+        }
+    } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+    } finally {
+        selectOutputBtn.disabled = false;
+        selectOutputBtn.textContent = 'Select folder';
     }
 });
 
@@ -89,7 +107,7 @@ convertBtn.addEventListener('click', async () => {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            showStatus(`${data.message}`, 'success');
+            showStatus(data.message, 'success');
         } else {
             const errorMsg = data.detail || data.message || 'Conversion failed';
             showStatus(errorMsg, 'error');

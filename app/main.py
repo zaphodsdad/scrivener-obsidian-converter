@@ -1,5 +1,7 @@
 """FastAPI app for Scrivener to Obsidian converter."""
 
+import subprocess
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -8,6 +10,52 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .converter import convert_project
+
+
+def open_file_dialog(dialog_type: str = "directory", title: str = "Select", file_types: list = None) -> str | None:
+    """Open a native file dialog using osascript (macOS)."""
+    if sys.platform != "darwin":
+        return None
+
+    if dialog_type == "scriv":
+        # Use osascript to open folder picker, then validate it's a .scriv
+        script = f'''
+        tell application "System Events"
+            activate
+        end tell
+        tell application "Finder"
+            activate
+        end tell
+        set chosenFolder to choose folder with prompt "{title}"
+        return POSIX path of chosenFolder
+        '''
+    else:
+        # Regular folder picker for output
+        script = f'''
+        tell application "System Events"
+            activate
+        end tell
+        tell application "Finder"
+            activate
+        end tell
+        set chosenFolder to choose folder with prompt "{title}"
+        return POSIX path of chosenFolder
+        '''
+
+    try:
+        result = subprocess.run(
+            ["osascript", "-e", script],
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+        if result.returncode == 0:
+            path = result.stdout.strip()
+            # Remove trailing slash for consistency
+            return path.rstrip("/")
+        return None
+    except Exception:
+        return None
 
 app = FastAPI(title="Scrivener to Obsidian Converter")
 
@@ -76,6 +124,47 @@ async def convert(request: ConvertRequest):
 async def health():
     """Health check endpoint."""
     return {"status": "ok"}
+
+
+class SelectResponse(BaseModel):
+    success: bool
+    path: str | None = None
+    error: str | None = None
+
+
+@app.post("/select-scriv", response_model=SelectResponse)
+async def select_scriv():
+    """Open a file dialog to select a Scrivener project."""
+    path = open_file_dialog(
+        dialog_type="scriv",
+        title="Select your Scrivener project (.scriv folder)"
+    )
+
+    if not path:
+        return SelectResponse(success=False, error="No folder selected")
+
+    # Validate it's a .scriv folder
+    if not path.endswith(".scriv"):
+        return SelectResponse(
+            success=False,
+            error="Please select a Scrivener project (.scriv folder)"
+        )
+
+    return SelectResponse(success=True, path=path)
+
+
+@app.post("/select-output", response_model=SelectResponse)
+async def select_output():
+    """Open a file dialog to select output folder."""
+    path = open_file_dialog(
+        dialog_type="directory",
+        title="Select where to save the Obsidian vault"
+    )
+
+    if not path:
+        return SelectResponse(success=False, error="No folder selected")
+
+    return SelectResponse(success=True, path=path)
 
 
 def run_app():
