@@ -21,6 +21,7 @@ class BinderItem:
     include_in_compile: bool = False
     label: str | None = None
     status: str | None = None
+    position: int = 0  # Position among siblings (0-indexed)
     children: list[BinderItem] = field(default_factory=list)
     parent: BinderItem | None = field(default=None, repr=False)
 
@@ -124,11 +125,11 @@ class ScrivenerProject:
             return []
 
         items = []
-        for item_elem in binder.findall("BinderItem"):
-            items.append(self._parse_binder_item(item_elem))
+        for idx, item_elem in enumerate(binder.findall("BinderItem")):
+            items.append(self._parse_binder_item(item_elem, position=idx))
         return items
 
-    def _parse_binder_item(self, element: ET.Element, parent: BinderItem | None = None) -> BinderItem:
+    def _parse_binder_item(self, element: ET.Element, parent: BinderItem | None = None, position: int = 0) -> BinderItem:
         """Parse a BinderItem XML element."""
         uuid = element.get("UUID", "")
         item_type = element.get("Type", "Text")
@@ -161,13 +162,14 @@ class ScrivenerProject:
             include_in_compile=include_in_compile,
             label=self._labels.get(label_id) if label_id else None,
             status=self._statuses.get(status_id) if status_id else None,
+            position=position,
             parent=parent,
         )
 
         children_elem = element.find("Children")
         if children_elem is not None:
-            for child_elem in children_elem.findall("BinderItem"):
-                child = self._parse_binder_item(child_elem, parent=item)
+            for idx, child_elem in enumerate(children_elem.findall("BinderItem")):
+                child = self._parse_binder_item(child_elem, parent=item, position=idx)
                 item.children.append(child)
 
         return item
@@ -282,12 +284,14 @@ def convert_project(scriv_path: str | Path, output_path: str | Path) -> Conversi
     output_dir.mkdir(parents=True, exist_ok=True)
 
     def get_item_path(item: BinderItem) -> list[str]:
-        """Get the path components for an item."""
+        """Get the path components for an item (with position prefixes)."""
         parts = []
         current = item.parent
         while current is not None:
             if not current.is_trash:
-                parts.append(sanitize_filename(current.title))
+                # Add position prefix for ordering (01, 02, etc.)
+                prefix = f"{current.position + 1:02d}"
+                parts.append(f"{prefix} {sanitize_filename(current.title)}")
             current = current.parent
         return list(reversed(parts))
 
@@ -311,21 +315,25 @@ def convert_project(scriv_path: str | Path, output_path: str | Path) -> Conversi
         try:
             path_parts = get_item_path(item)
 
+            # Position prefix for ordering (01, 02, etc.)
+            prefix = f"{item.position + 1:02d}"
+
             if item.is_folder:
-                # Create folder
-                folder_path = output_dir.joinpath(*path_parts, sanitize_filename(item.title))
+                # Create folder with position prefix
+                folder_name = f"{prefix} {sanitize_filename(item.title)}"
+                folder_path = output_dir.joinpath(*path_parts, folder_name)
                 folder_path.mkdir(parents=True, exist_ok=True)
                 result.folders_created += 1
 
             elif item.is_text:
-                # Create markdown file
+                # Create markdown file with position prefix
                 if path_parts:
                     file_dir = output_dir.joinpath(*path_parts)
                     file_dir.mkdir(parents=True, exist_ok=True)
                 else:
                     file_dir = output_dir
 
-                filename = sanitize_filename(item.title) + ".md"
+                filename = f"{prefix} {sanitize_filename(item.title)}.md"
                 file_path = file_dir / filename
 
                 content = project.read_content(item)
