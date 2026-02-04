@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from .converter import convert_project
 
 
-def open_file_dialog(dialog_type: str = "directory", title: str = "Select") -> str | None:
+def open_file_dialog(dialog_type: str = "directory", title: str = "Select", default_name: str = "") -> str | None:
     """Open a native file dialog using osascript (macOS)."""
     if sys.platform != "darwin":
         return None
@@ -25,6 +25,16 @@ def open_file_dialog(dialog_type: str = "directory", title: str = "Select") -> s
         end tell
         set chosenFile to choose file with prompt "{title}" of type {{"com.literatureandlatte.scrivener3.project", "scriv"}}
         return POSIX path of chosenFile
+        '''
+    elif dialog_type == "new_folder":
+        # Let user choose location and name for new folder
+        script = f'''
+        tell application "Finder"
+            activate
+        end tell
+        set defaultName to "{default_name}"
+        set savePath to choose file name with prompt "{title}" default name defaultName
+        return POSIX path of savePath
         '''
     else:
         # Regular folder picker for output
@@ -147,16 +157,23 @@ async def select_scriv():
     return SelectResponse(success=True, path=path)
 
 
+class SelectOutputRequest(BaseModel):
+    default_name: str = "My Vault"
+
+
 @app.post("/select-output", response_model=SelectResponse)
-async def select_output():
-    """Open a file dialog to select output folder."""
+async def select_output(request: SelectOutputRequest = None):
+    """Open a file dialog to create/select output folder."""
+    default_name = request.default_name if request else "My Vault"
+
     path = open_file_dialog(
-        dialog_type="directory",
-        title="Select where to save the Obsidian vault"
+        dialog_type="new_folder",
+        title="Save Obsidian vault as",
+        default_name=default_name
     )
 
     if not path:
-        return SelectResponse(success=False, error="No folder selected")
+        return SelectResponse(success=False, error="No location selected")
 
     return SelectResponse(success=True, path=path)
 

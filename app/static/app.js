@@ -60,8 +60,19 @@ selectOutputBtn.addEventListener('click', async () => {
     selectOutputBtn.disabled = true;
     selectOutputBtn.textContent = 'Opening...';
 
+    // Suggest vault name based on scriv file
+    let defaultName = "My Vault";
+    if (scrivPathInput.value) {
+        const scrivName = scrivPathInput.value.split('/').pop().replace('.scriv', '');
+        defaultName = scrivName + " Vault";
+    }
+
     try {
-        const response = await fetch('/select-output', { method: 'POST' });
+        const response = await fetch('/select-output', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ default_name: defaultName })
+        });
         const data = await response.json();
 
         if (data.success && data.path) {
