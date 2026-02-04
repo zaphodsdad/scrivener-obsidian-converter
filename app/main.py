@@ -12,29 +12,23 @@ from pydantic import BaseModel
 from .converter import convert_project
 
 
-def open_file_dialog(dialog_type: str = "directory", title: str = "Select", file_types: list = None) -> str | None:
+def open_file_dialog(dialog_type: str = "directory", title: str = "Select") -> str | None:
     """Open a native file dialog using osascript (macOS)."""
     if sys.platform != "darwin":
         return None
 
     if dialog_type == "scriv":
-        # Use osascript to open folder picker, then validate it's a .scriv
+        # Select .scriv bundle (appears as file in Finder)
         script = f'''
-        tell application "System Events"
-            activate
-        end tell
         tell application "Finder"
             activate
         end tell
-        set chosenFolder to choose folder with prompt "{title}"
-        return POSIX path of chosenFolder
+        set chosenFile to choose file with prompt "{title}" of type {{"com.literatureandlatte.scrivener3.project", "scriv"}}
+        return POSIX path of chosenFile
         '''
     else:
         # Regular folder picker for output
         script = f'''
-        tell application "System Events"
-            activate
-        end tell
         tell application "Finder"
             activate
         end tell
