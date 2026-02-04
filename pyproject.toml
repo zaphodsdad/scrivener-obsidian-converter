@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "obsidian-converter"
+version = "0.1.0"
+description = "Simple web app to convert Scrivener projects to Obsidian vaults"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "striprtf>=0.0.26",
+]
+
+[project.scripts]
+obsidian-converter = "app.main:run_app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
