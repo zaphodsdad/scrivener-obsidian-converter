@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrivener to Obsidian</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Scrivener &rarr; Obsidian</h1>
+            <p class="subtitle">Convert your Scrivener projects to Obsidian vaults</p>
+        </header>
+
+        <main>
+            <div class="input-group">
+                <label for="scriv-path">Scrivener Project:</label>
+                <div class="path-input">
+                    <input type="text" id="scriv-path" placeholder="/path/to/Your Novel.scriv" readonly>
+                    <button type="button" id="select-scriv" class="btn-secondary">Select .scriv</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="output-path">Output Folder:</label>
+                <div class="path-input">
+                    <input type="text" id="output-path" placeholder="/path/to/Your Novel Vault" readonly>
+                    <button type="button" id="select-output" class="btn-secondary">Select folder</button>
+                </div>
+            </div>
+
+            <button type="button" id="convert-btn" class="btn-primary" disabled>
+                Convert
+            </button>
+
+            <div id="status" class="status hidden"></div>
+        </main>
+
+        <footer>
+            <p>Your files stay on your computer. Nothing is uploaded.</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
