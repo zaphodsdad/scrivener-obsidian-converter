@@ -50,8 +50,8 @@ The rain had been falling for three days...
 ### macOS
 
 ```bash
-git clone https://github.com/zaphodsdad/obsidian-converter.git
-cd obsidian-converter
+git clone https://github.com/zaphodsdad/scrivener-obsidian-converter.git
+cd scrivener-obsidian-converter
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
@@ -60,7 +60,7 @@ pip install -e .
 ### Running
 
 ```bash
-cd obsidian-converter
+cd scrivener-obsidian-converter
 source .venv/bin/activate
 uvicorn app.main:app --port 8000
 ```
